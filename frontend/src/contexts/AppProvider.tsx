@@ -92,7 +92,19 @@ export const AppContextProvider = ({ children }: AppContextProviderProps) => {
     if (worker) worker.terminate();
     // start new worker
     const newWorker = new Worker(workers[lang], { type: "classic", name: `${lang}-worker` });
+    // newWorker.postMessage({"sab": sab})
     newWorker.onmessage = (event: MessageEvent) => {
+      if(event.data.promp !== undefined){
+        console.log(event.data.promp)
+        const notifier = new Int32Array(event.data.promp.sab)
+        let val = String(prompt("?"))
+        let view = new Uint16Array(event.data.promp.sab);
+        view[0] = val.length
+        for(let i=0;i<val.length;i++)
+          view[i+2] = val.charCodeAt(i)
+        console.log(Atomics.notify(notifier, 0));
+
+      }else{
       const parsedLang = Language.safeParse(event.data.lang);
       const parsedOutput = Output.safeParse(event.data.output);
       if (!parsedOutput.success || !parsedLang.success) return;
@@ -100,6 +112,7 @@ export const AppContextProvider = ({ children }: AppContextProviderProps) => {
       const data = parsedOutput.data.data;
       const status = parsedOutput.data.status;
       setOutputs((prev) => ({ ...prev, [parsedLang.data]: { status, data: [...prev[lang].data, ...data] } }));
+      }
     };
     setWorker(newWorker);
   }, [editor.lang]);
