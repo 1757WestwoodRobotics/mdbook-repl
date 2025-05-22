@@ -15,7 +15,7 @@ const stdin = () => {
     return "NO CORS"
   }
   let sab = new SharedArrayBuffer(Uint16Array.BYTES_PER_ELEMENT * 256)
-  self.postMessage({promp: {sab}})
+  self.postMessage({promp: {sab}, lang: "python"})
   Atomics.wait(new Int32Array(sab), 0)
 
   let innerData = new Uint16Array(sab);

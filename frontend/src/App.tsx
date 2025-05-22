@@ -3,6 +3,7 @@ import { useAppContext } from "@/contexts/AppProvider";
 
 const Editor = lazy(() => import("@/components/Editor/Editor"));
 const Output = lazy(() => import("@/components/Output/Output"));
+const Input = lazy(() => import("@/components/Input/Input"));
 
 export default function App() {
   const { isFullscreen } = useAppContext();
@@ -11,6 +12,7 @@ export default function App() {
     <main data-fullscreen={isFullscreen}>
       <Editor />
       <Output />
+      <Input />
     </main>
   );
 }

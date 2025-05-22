@@ -4,6 +4,7 @@ import useResizeObserver from "@/hooks/useResizeObserver";
 
 import { defaultCodes } from "@/data/app";
 import { Output, OutputsType } from "@/types/output";
+import { InputsType } from "@/types/input";
 import { Editor, EditorType, Language } from "@/types/editor";
 
 const workers = {
@@ -16,6 +17,12 @@ const defaultOutputs: OutputsType = {
   python: { status: "loading", data: [] },
   typescript: { status: "loading", data: [] },
   javascript: { status: "loading", data: [] }
+};
+
+const defaultInputs: InputsType = {
+  python: { status: "idle", data: [], notifier: null },
+  typescript: { status: "idle", data: [], notifier: null },
+  javascript: { status: "idle", data: [], notifier: null }
 };
 
 const defaultEditorOptions: EditorType = {
@@ -31,10 +38,12 @@ interface AppContextProps {
   setEditor: Dispatch<SetStateAction<EditorType>>;
 
   outputs: OutputsType;
+  inputs: InputsType;
   isFullscreen: boolean | null;
 
   execuateCode: () => void;
   clearOutput: () => void;
+  clearInput: () => void;
 }
 
 const AppContext = createContext<AppContextProps>({
@@ -42,10 +51,12 @@ const AppContext = createContext<AppContextProps>({
   setEditor: () => {},
 
   outputs: defaultOutputs,
+  inputs: defaultInputs,
   isFullscreen: null,
 
   execuateCode: () => {},
-  clearOutput: () => {}
+  clearOutput: () => {},
+  clearInput: () => {}
 });
 
 interface AppContextProviderProps {
@@ -58,6 +69,7 @@ export const AppContextProvider = ({ children }: AppContextProviderProps) => {
   const [id, setId] = useState<string>("");
   const [worker, setWorker] = useState<Worker | null>(null);
   const [outputs, setOutputs] = useState<OutputsType>(defaultOutputs);
+  const [inputs, setInputs] = useState<InputsType>(defaultInputs);
   const [isFullscreen, setIsFullscreen] = useState<boolean | null>(null);
   const [editor, setEditor] = useState<EditorType>(defaultEditorOptions);
 
@@ -78,6 +90,9 @@ export const AppContextProvider = ({ children }: AppContextProviderProps) => {
   function clearOutput() {
     setOutputs((prev) => ({ ...prev, [editor.lang]: { status: "idle", data: [] } }));
   }
+  function clearInput() {
+    setInputs((prev) => ({ ...prev, [editor.lang]: { status: "idle", data: [], notifier: null } }));
+  }
 
   // listen theme change
   useEffect(() => {
@@ -97,12 +112,17 @@ export const AppContextProvider = ({ children }: AppContextProviderProps) => {
       if(event.data.promp !== undefined){
         console.log(event.data.promp)
         const notifier = new Int32Array(event.data.promp.sab)
-        let val = String(prompt("?"))
+
         let view = new Uint16Array(event.data.promp.sab);
-        view[0] = val.length
-        for(let i=0;i<val.length;i++)
-          view[i+2] = val.charCodeAt(i)
-        console.log(Atomics.notify(notifier, 0));
+
+        const parsedLang = Language.safeParse(event.data.lang);
+        if (!parsedLang.success) return;
+        setInputs((prev) => ({...prev, [parsedLang.data]: { status: "query", data: view, notifier}}));
+        console.log("input set")
+        // view[0] = val.length
+        // for(let i=0;i<val.length;i++)
+        //   view[i+2] = val.charCodeAt(i)
+        // console.log(Atomics.notify(notifier, 0));
 
       }else{
       const parsedLang = Language.safeParse(event.data.lang);
@@ -161,10 +181,12 @@ export const AppContextProvider = ({ children }: AppContextProviderProps) => {
         setEditor,
 
         outputs,
+        inputs,
         isFullscreen,
 
         execuateCode,
-        clearOutput
+        clearOutput,
+        clearInput
       }}
     >
       {children}
